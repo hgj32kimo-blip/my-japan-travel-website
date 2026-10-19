@@ -2,15 +2,15 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>神戶一日遊互動導覽地圖 | KOBE 1-DAY TRAVEL GUIDE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>神戶一日遊導覽地圖 | 方案 B：悠閒海港漫步與夜景</title>
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <!-- Google Fonts: Noto Serif TC, Noto Sans TC, Cinzel -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@600;900&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -34,36 +34,21 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    /* 允許整頁自然垂直滾動，徹底解決手機無法下拉問題 */
     html, body {
       width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: 'Noto Sans TC', sans-serif;
+      min-height: 100%;
       background-color: var(--bg-cream);
       color: var(--text-main);
+      font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
-    #app-container {
-      display: flex;
-      width: 100vw;
-      height: 100vh;
-      position: relative;
-    }
-
-    #sidebar {
-      width: 480px;
-      height: 100%;
-      background: var(--card-bg);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      box-shadow: 4px 0 24px rgba(27, 42, 71, 0.08);
-      z-index: 1000;
-      flex-shrink: 0;
-    }
-
+    /* 頂部刊頭 */
     .header-box {
-      padding: 22px 24px 18px;
+      padding: 16px 20px;
       background: var(--navy);
       color: #ffffff;
       border-bottom: 3px solid var(--gold);
@@ -89,24 +74,80 @@
       background: rgba(255, 255, 255, 0.15);
       padding: 3px 10px;
       border-radius: 12px;
-      letter-spacing: 0.5px;
     }
 
     .header-title {
       font-family: 'Noto Serif TC', serif;
-      font-size: 1.55rem;
+      font-size: 1.35rem;
       font-weight: 900;
-      letter-spacing: 1px;
       margin-bottom: 4px;
-      line-height: 1.25;
+      line-height: 1.3;
     }
 
     .header-summary {
-      font-size: 0.83rem;
+      font-size: 0.82rem;
       color: #c9d5e8;
       line-height: 1.45;
     }
 
+    /* 頁面主要容器 */
+    #page-container {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* 地圖視窗：手機版吸頂 Sticky，看行程隨時對照 */
+    #map-wrapper {
+      position: sticky;
+      top: 0;
+      width: 100%;
+      height: 40vh;
+      min-height: 250px;
+      max-height: 360px;
+      z-index: 500;
+      background: #e5e0d8;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+
+    /* 地圖浮動切換鈕 */
+    .layer-selector {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.94);
+      padding: 3px 6px;
+      border-radius: 16px;
+      border: 1px solid var(--border-dark);
+      display: flex;
+      gap: 4px;
+    }
+
+    .layer-btn {
+      border: none;
+      background: transparent;
+      padding: 4px 10px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--navy);
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .layer-btn.active {
+      background: var(--navy);
+      color: #ffffff;
+    }
+
+    /* 交通指南可折疊手風琴 */
     .transit-accordion {
       background: #f4eee3;
       border-bottom: 1px solid var(--border);
@@ -114,27 +155,21 @@
 
     .transit-trigger {
       width: 100%;
-      padding: 11px 20px;
+      padding: 12px 18px;
       border: none;
       background: transparent;
       display: flex;
       justify-content: space-between;
       align-items: center;
       cursor: pointer;
-      font-family: 'Noto Sans TC', sans-serif;
-      font-size: 0.84rem;
+      font-size: 0.86rem;
       font-weight: 700;
       color: var(--navy);
-      transition: background 0.2s;
-    }
-
-    .transit-trigger:hover {
-      background: #eee6d8;
     }
 
     .transit-details {
       display: none;
-      padding: 12px 20px 16px;
+      padding: 12px 18px 16px;
       background: #fbf9f4;
       border-top: 1px dashed var(--border-dark);
       font-size: 0.81rem;
@@ -148,10 +183,10 @@
 
     .transit-route-box {
       margin-bottom: 10px;
-      padding: 8px 12px;
+      padding: 9px 12px;
       background: #ffffff;
       border-radius: 6px;
-      border-left: 3px solid var(--kobe-red);
+      border-left: 3.5px solid var(--kobe-red);
       box-shadow: 0 1px 4px rgba(0,0,0,0.03);
     }
 
@@ -163,14 +198,12 @@
       font-weight: 700;
       color: var(--navy);
       margin-bottom: 3px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
     }
 
+    /* 方案切換標籤 */
     .route-tabs {
       display: flex;
-      padding: 10px 18px;
+      padding: 10px 16px;
       background: #eee8de;
       border-bottom: 1px solid var(--border);
       gap: 8px;
@@ -178,15 +211,14 @@
 
     .tab-btn {
       flex: 1;
-      padding: 10px 8px;
+      padding: 9px 8px;
       border-radius: 6px;
       border: 1px solid var(--border-dark);
       background: #ffffff;
       color: var(--text-main);
-      font-size: 0.83rem;
+      font-size: 0.82rem;
       font-weight: 700;
       cursor: pointer;
-      transition: all 0.2s ease;
       text-align: center;
     }
 
@@ -194,46 +226,32 @@
       background: var(--kobe-red);
       color: #ffffff;
       border-color: var(--kobe-red);
-      box-shadow: 0 2px 8px rgba(201, 74, 41, 0.28);
+      box-shadow: 0 2px 6px rgba(201, 74, 41, 0.25);
     }
 
+    /* 行程清單卡片區域（完整垂直長列表） */
     .timeline-container {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px 18px 24px;
-      scroll-behavior: smooth;
-    }
-
-    .timeline-container::-webkit-scrollbar {
-      width: 6px;
-    }
-    .timeline-container::-webkit-scrollbar-thumb {
-      background: #dcd4c7;
-      border-radius: 4px;
+      padding: 16px 16px 40px;
     }
 
     .trip-card {
       background: #ffffff;
       border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 16px;
+      border-radius: 10px;
+      padding: 15px;
       margin-bottom: 14px;
-      cursor: pointer;
-      position: relative;
-      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+      transition: border-color 0.2s, transform 0.2s;
     }
 
-    .trip-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(27, 42, 71, 0.08);
-      border-color: var(--kobe-red);
+    .trip-card:active {
+      transform: scale(0.99);
     }
 
     .trip-card.active-spot {
       border-color: var(--kobe-red);
       border-left: 5px solid var(--kobe-red);
       background: #fffcf9;
-      box-shadow: 0 4px 14px rgba(201, 74, 41, 0.12);
     }
 
     .card-meta {
@@ -258,10 +276,9 @@
     }
 
     .step-time {
-      font-size: 0.77rem;
+      font-size: 0.8rem;
       font-weight: 700;
       color: var(--kobe-red);
-      letter-spacing: 0.5px;
     }
 
     .plan-tag {
@@ -275,43 +292,40 @@
 
     .card-title {
       font-family: 'Noto Serif TC', serif;
-      font-size: 1.05rem;
-      font-weight: 800;
+      font-size: 1.1rem;
+      font-weight: 900;
       color: var(--navy);
       margin-bottom: 2px;
       line-height: 1.35;
     }
 
     .card-jp {
-      font-size: 0.81rem;
+      font-size: 0.8rem;
       color: var(--gold);
       font-weight: 700;
       margin-bottom: 6px;
     }
 
     .card-desc {
-      font-size: 0.82rem;
+      font-size: 0.84rem;
       color: var(--text-muted);
       line-height: 1.5;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
     .restaurant-drawer {
       margin-top: 10px;
-      padding: 9px 12px;
+      padding: 10px 12px;
       background: #fbf9f5;
       border: 1px solid var(--border);
       border-radius: 6px;
-      font-size: 0.79rem;
+      font-size: 0.8rem;
     }
 
     .rest-heading {
       font-weight: 800;
       color: var(--navy);
-      margin-bottom: 5px;
-      display: flex;
-      align-items: center;
-      gap: 5px;
+      margin-bottom: 6px;
     }
 
     .rest-item {
@@ -319,7 +333,7 @@
       padding-left: 12px;
       position: relative;
       color: #403831;
-      line-height: 1.4;
+      line-height: 1.45;
     }
 
     .rest-item::before {
@@ -344,118 +358,47 @@
 
     .btn-fly {
       flex: 1;
-      padding: 6px 10px;
+      padding: 8px 10px;
       background: #f4eee5;
       border: 1px solid var(--border-dark);
-      border-radius: 4px;
-      font-size: 0.76rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
       font-weight: 700;
       color: var(--navy);
       cursor: pointer;
       text-align: center;
     }
 
-    .btn-fly:hover {
-      background: #eae2d5;
-    }
-
     .btn-gnav {
       flex: 1.2;
-      padding: 6px 10px;
+      padding: 8px 10px;
       background: #2563eb;
-      color: #ffffff;
+      color: #ffffff !important;
       text-decoration: none;
-      border-radius: 4px;
-      font-size: 0.76rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
       font-weight: 700;
       text-align: center;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 4px;
-      transition: background 0.2s;
     }
 
-    .btn-gnav:hover {
-      background: #1d4ed8;
-    }
-
-    #map-wrapper {
-      flex: 1;
-      height: 100%;
-      position: relative;
-      background: #f0ece3;
-    }
-
-    #map {
-      width: 100%;
-      height: 100%;
-      z-index: 1;
-    }
-
-    .layer-selector {
-      position: absolute;
-      top: 18px;
-      right: 20px;
-      z-index: 1001;
-      background: rgba(255, 255, 255, 0.94);
-      backdrop-filter: blur(8px);
-      padding: 4px 6px;
-      border-radius: 20px;
-      border: 1px solid var(--border-dark);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-      display: flex;
-      gap: 4px;
-    }
-
-    .layer-btn {
-      border: none;
-      background: transparent;
-      padding: 5px 12px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--navy);
-      border-radius: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .layer-btn.active {
-      background: var(--navy);
-      color: #ffffff;
-    }
-
-    .map-banner {
-      position: absolute;
-      top: 18px;
-      left: 20px;
-      z-index: 1001;
-      background: rgba(255, 255, 255, 0.94);
-      backdrop-filter: blur(8px);
-      padding: 7px 14px;
-      border-radius: 20px;
-      border: 1px solid var(--border-dark);
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
-      font-size: 0.8rem;
-      font-weight: 700;
-      color: var(--navy);
-      pointer-events: none;
-    }
-
+    /* 地圖自訂 Pin */
     .custom-map-pin {
       display: flex;
       align-items: center;
       justify-content: center;
-      width: 30px;
-      height: 30px;
+      width: 28px;
+      height: 28px;
       border-radius: 50%;
       background: var(--navy);
       color: #ffffff;
       font-weight: 900;
-      font-size: 13px;
-      border: 2.5px solid #ffffff;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
-      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      font-size: 12px;
+      border: 2px solid #ffffff;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.35);
     }
 
     .custom-map-pin.branch-pin {
@@ -464,23 +407,23 @@
 
     .custom-popup-box h3 {
       font-family: 'Noto Serif TC', serif;
-      font-size: 1.05rem;
+      font-size: 1rem;
       color: var(--navy);
       margin-bottom: 2px;
     }
 
     .custom-popup-box .popup-jp {
-      font-size: 0.78rem;
+      font-size: 0.76rem;
       color: var(--gold);
       font-weight: 700;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
 
     .custom-popup-box p {
-      font-size: 0.82rem;
+      font-size: 0.8rem;
       color: #4a4a4a;
-      line-height: 1.45;
-      margin-bottom: 10px;
+      line-height: 1.4;
+      margin-bottom: 8px;
     }
 
     .popup-gnav-btn {
@@ -488,122 +431,105 @@
       background: #2563eb;
       color: #ffffff !important;
       text-decoration: none;
-      padding: 7px 12px;
+      padding: 6px 10px;
       border-radius: 4px;
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       font-weight: 700;
       text-align: center;
     }
 
-    @media (max-width: 880px) {
-      #app-container {
-        flex-direction: column-reverse;
-      }
-      #sidebar {
-        width: 100%;
-        height: 52%;
-        border-right: none;
-        border-top: 2px solid var(--border);
+    /* 電腦螢幕左右分欄 */
+    @media (min-width: 900px) {
+      #page-container {
+        flex-direction: row-reverse;
+        height: 100vh;
       }
       #map-wrapper {
-        width: 100%;
-        height: 48%;
+        position: relative;
+        top: 0;
+        width: 55%;
+        height: 100vh;
+        max-height: none;
       }
-      .map-banner {
-        top: 10px;
-        left: 10px;
-        font-size: 0.74rem;
-        padding: 5px 10px;
-      }
-      .layer-selector {
-        top: 10px;
-        right: 10px;
+      #content-panel {
+        width: 45%;
+        height: 100vh;
+        overflow-y: auto;
+        border-right: 1px solid var(--border);
       }
     }
   </style>
 </head>
 <body>
 
-  <div id="app-container">
-    
-    <!-- 左側行程控制與資訊抽屜 -->
-    <aside id="sidebar">
-      
-      <!-- 刊頭 Header -->
-      <div class="header-box">
-        <div class="header-sub-tag">
-          <span class="vol-badge">KANSAI MOOK // KOBE TRIP</span>
-          <span class="time-badge">11:00 心齋橋出發</span>
-        </div>
-        <h1 class="header-title">神戶一日質感散策導覽</h1>
-        <p class="header-summary">方案 B：悠閒海港漫步與夜景（三宮牛排 ➔ 生田神社 ➔ 北野異人館 ➔ 南京町 ➔ MOSAIC 摩天輪夜景）。</p>
-      </div>
+  <!-- 頂部刊頭 Header -->
+  <header class="header-box">
+    <div class="header-sub-tag">
+      <span class="vol-badge">KANSAI TRAVEL GUIDE</span>
+      <span class="time-badge">11:00 心齋橋出發</span>
+    </div>
+    <h1 class="header-title">神戶一日質感散策地圖</h1>
+    <p class="header-summary">方案 B：三宮和牛午餐 ➔ 生田神社 ➔ 北野異人館 ➔ 南京町 ➔ MOSAIC 摩天輪夜景。</p>
+  </header>
 
-      <!-- 交通指南折疊面板 -->
-      <div class="transit-accordion">
-        <button class="transit-trigger" onclick="toggleTransit()">
-          <span>🚆 通車路線與市內交通指南</span>
-          <span id="transit-indicator">▼ 點擊展開</span>
-        </button>
-        <div class="transit-details" id="transit-drawer">
-          <div class="transit-route-box">
-            <div class="transit-title">⚡ 去程：11:00 心齋橋 ➔ 神戶三宮（最速 JR 新快速）</div>
-            <div>於心齋橋搭乘地下鐵御堂筋線至<strong>「梅田駅」</strong>（約 6 分），於大阪站轉乘 <strong>JR 神戶線新快速</strong> 直達<strong>「JR 三ノ宮駅」</strong>（最速 21 分）。全程約 45–50 分鐘。</div>
-          </div>
-          <div class="transit-route-box">
-            <div class="transit-title">🚇 去程備選：大阪難波直通車（阪神電鐵）</div>
-            <div>自旅館步行至<strong>「大阪難波駅」</strong>搭乘 <strong>阪神難波線（快速急行）</strong> 直達<strong>「神戶三宮駅」</strong>，免於梅田換車轉乘。</div>
-          </div>
-          <div class="transit-route-box">
-            <div class="transit-title">🚌 神戶市內接駁密技</div>
-            <div>
-              • <strong>生田神社 ➔ 北野異人館</strong>：沿北野坂緩坡向上漫步約 15 分鐘，沿途有特色洋菓子與雜貨店。<br>
-              • <strong>北野異人館 ➔ 南京町</strong>：下山可順坡散步約 15 分鐘，亦可於坡頂搭乘綠色 <strong>City Loop 觀光巴士</strong> 直達中華街（南京町）。<br>
-              • <strong>南京町 ➔ Harborland umie / MOSAIC</strong>：往海邊方向輕鬆徒步約 10 分鐘即可抵達濱海木棧長廊。
-            </div>
-          </div>
-          <div class="transit-route-box">
-            <div class="transit-title">🌙 賦歸路線：20:45–21:00 神戶三宮 ➔ 回旅館</div>
-            <div>
-              於神戶三宮搭乘 <strong>JR 神戶線（新快速）</strong> 至大阪/梅田轉御堂筋線，或搭乘 <strong>阪神難波線直通列車</strong> 直達大阪難波後，步行回道頓堀 <strong>Elizabeth Garden Shinsaibashi</strong> 旅館（車程約 40–50 分鐘）。
-            </div>
-          </div>
+  <!-- 通車指南折疊面板 -->
+  <section class="transit-accordion">
+    <button class="transit-trigger" onclick="toggleTransit()">
+      <span>🚆 通車路線與市內交通指南</span>
+      <span id="transit-indicator">▼ 點擊展開</span>
+    </button>
+    <div class="transit-details" id="transit-drawer">
+      <div class="transit-route-box">
+        <div class="transit-title">⚡ 去程：11:00 心齋橋 ➔ 神戶三宮（JR 新快速最速）</div>
+        <div>心齋橋搭地下鐵御堂筋線至<strong>「梅田駅」</strong>（約 6 分），於大阪站轉乘 <strong>JR 神戶線新快速</strong> 直達<strong>「JR 三ノ宮駅」</strong>（最速 21 分）。全程約 45–50 分鐘。</div>
+      </div>
+      <div class="transit-route-box">
+        <div class="transit-title">🚇 去程備選：大阪難波直通車（阪神電鐵）</div>
+        <div>自飯店步行至<strong>「大阪難波駅」</strong>搭乘 <strong>阪神難波線（快速急行）</strong> 直通特急抵達<strong>「神戸三宮駅」</strong>，免換車最省心。</div>
+      </div>
+      <div class="transit-route-box">
+        <div class="transit-title">🚌 神戶市內散步與接駁</div>
+        <div>
+          • <strong>生田神社 ➔ 北野異人館</strong>：沿北野坂緩坡向上步行約 15 分鐘。<br>
+          • <strong>北野異人館 ➔ 南京町</strong>：順坡步行下山約 15 分鐘，亦可在風見雞館旁搭乘綠色 <strong>City Loop 觀光巴士</strong> 直達中華街。<br>
+          • <strong>南京町 ➔ MOSAIC 長廊</strong>：往海邊方向輕鬆漫步約 10 分鐘即抵。
         </div>
       </div>
-
-      <!-- 行程方案切換列 -->
-      <div class="route-tabs">
-        <button class="tab-btn active" id="tabB" onclick="switchPlan('B')">
-          方案 B：悠閒海港漫步與夜景
-        </button>
-        <button class="tab-btn" id="tabA" onclick="switchPlan('A')">
-          方案 A：水族館 átoa 與名店巡禮
-        </button>
+      <div class="transit-route-box">
+        <div class="transit-title">🌙 賦歸路線：20:45–21:00 神戶三宮 ➔ 回飯店</div>
+        <div>
+          於神戶三宮搭乘 <strong>JR 神戶線（新快速）</strong> 至大阪梅田轉御堂筋線，或搭乘 <strong>阪神難波線直通列車</strong> 直達大阪難波，步行回道頓堀 <strong>Elizabeth Garden Shinsaibashi</strong> 旅館。
+        </div>
       </div>
+    </div>
+  </section>
 
-      <!-- 景點時間軸滾動列表 -->
-      <div class="timeline-container" id="timelineList"></div>
+  <!-- 方案切換列 -->
+  <nav class="route-tabs">
+    <button class="tab-btn active" id="tabB" onclick="switchPlan('B')">
+      方案 B：悠閒海港漫步與夜景
+    </button>
+    <button class="tab-btn" id="tabA" onclick="switchPlan('A')">
+      方案 A：átoa 水族館與名店
+    </button>
+  </nav>
 
-    </aside>
+  <!-- 主要內容區 -->
+  <div id="page-container">
 
-    <!-- 右側地圖視窗容器 -->
-    <main id="map-wrapper">
-      
-      <!-- 圖資切換選單 -->
+    <!-- 地圖視窗（手機版吸頂） -->
+    <div id="map-wrapper">
       <div class="layer-selector">
         <button class="layer-btn active" id="btnLayerStd" onclick="setGsiLayer('std')">標準圖</button>
         <button class="layer-btn" id="btnLayerPale" onclick="setGsiLayer('pale')">淡色圖</button>
       </div>
-
-      <!-- 導航方位提示 -->
-      <div class="map-banner">
-        <span id="map-banner-text">📍 方案 B：山側洋館漫步至海港摩天輪夜景</span>
-      </div>
-
-      <!-- 地圖 DOM 容器 -->
       <div id="map"></div>
+    </div>
 
-    </main>
+    <!-- 行程滾動內容區（手機版直接順暢向下滑動） -->
+    <div id="content-panel">
+      <main class="timeline-container" id="timelineList"></main>
+    </div>
 
   </div>
 
@@ -611,7 +537,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
   <script>
-    // 方案 B 完整行程資料庫
+    // 方案 B 景點資料庫
     const spotsPlanB = [
       {
         id: "b_start",
@@ -621,7 +547,7 @@
         jpName: "心斎橋駅 ➔ 三宮駅",
         lat: 34.6946,
         lng: 135.1953,
-        desc: "地下鐵御堂筋線至梅田轉乘 JR 新快速（最速 21 分）或難波搭乘阪神特急直達神戶三宮，車程約 45–50 分鐘。",
+        desc: "地下鐵御堂筋線至梅田轉乘 JR 新快速（最速 21 分）或自難波搭乘阪神直通特急抵達神戶三宮，車程約 45–50 分鐘。",
         gmapQuery: "JR 三ノ宮駅",
         restaurants: null
       },
@@ -638,8 +564,8 @@
         restaurants: {
           title: "午餐神戶牛排 3 選推薦：",
           items: [
-            { jp: "ステーキランド神戸館 (Steakland Kobe)", desc: "三宮站旁高 CP 值首選，午間神戶牛排套餐實惠飽足、蒜片香氣逼人。" },
-            { jp: "神戸牛ステーキレストラン モーリヤ 本店 (Mouriya Honten)", desc: "創立於 1885 年的百年名店，但馬牛油花細膩，佐赤穗海鹽絕品。" },
+            { jp: "ステーキランド神戸館 (Steakland Kobe)", desc: "三宮站旁高 CP 值首選，午間牛排套餐實惠飽足、蒜片香氣逼人。" },
+            { jp: "神戸牛ステーキレストラン モーリヤ 本店 (Mouriya)", desc: "創立於 1885 年的百年名店，但馬牛油花細膩，佐赤穗海鹽絕品。" },
             { jp: "あぶり肉工房 和黒 北野坂店 (Wakkoqu)", desc: "注重炭火溫控與精緻烤工，修煎酥脆牛油角，位於前往北野坂路線最順路。" }
           ]
         }
@@ -652,7 +578,7 @@
         jpName: "生田神社 (Ikuta Jinja)",
         lat: 34.6948,
         lng: 135.1906,
-        desc: "【步行約 5 分鐘抵達】擁有 1800 年悠久歷史的神戶起緣之地。穿過朱紅鳥居，於後殿「生田之森」體驗神奇流水水占卜。",
+        desc: "【步行約 5 分鐘抵達】擁有 1800 年歷史的神戶緣起地。穿過朱紅鳥居，於後殿「生田之森」體驗神奇流水水占卜。",
         gmapQuery: "生田神社",
         restaurants: null
       },
@@ -664,7 +590,7 @@
         jpName: "北野異人館街 (Kitano Ijinkan)",
         lat: 34.7011,
         lng: 135.1898,
-        desc: "【沿北野坂緩坡向上步行約 15 分鐘】參觀紅磚風向雞屋頂的「風見鶏の館」、薄荷綠洋房「萌黄の館」，並漫步洋房星巴克。",
+        desc: "【沿北野坂緩坡向上步行約 15 分鐘】參觀紅磚風向雞屋頂的「風見鶏の館」、薄荷綠洋房「萌黄の館」，漫步洋房星巴克。",
         gmapQuery: "風見鶏の館",
         restaurants: null
       },
@@ -676,7 +602,7 @@
         jpName: "南京町 (Nankinmachi)",
         lat: 34.6883,
         lng: 135.1882,
-        desc: "【徒步或搭乘 City Loop 觀光巴士約 15 分鐘】漫步日本三大中華街，品嚐排隊名店老祥記熱呼呼豚肉小籠包與各式街頭點心。",
+        desc: "【徒步或搭乘 City Loop 巴士約 15 分鐘】漫步日本三大中華街，品嚐排隊名店老祥記熱呼呼豚肉小籠包與各式街頭點心。",
         gmapQuery: "南京町 老祥記",
         restaurants: null
       },
@@ -688,7 +614,7 @@
         jpName: "神戸ハーバーランド umie & MOSAIC",
         lat: 34.6789,
         lng: 135.1848,
-        desc: "【往港灣方向步行約 10 分鐘】岸邊第一排正對紅色的神戶港塔（神戸ポートタワー）與海洋博物館，捕捉經典明信片夜景視角；逛逛特色雜貨與洋菓子甜點店。",
+        desc: "【往港灣方向步行約 10 分鐘】岸邊第一排正對紅色的神戶港塔（神戸ポートタワー）與海洋博物館，捕捉經典夜景；逛逛特色雜貨與甜點店。",
         gmapQuery: "神戸ハーバーランド MOSAIC",
         restaurants: null
       },
@@ -696,11 +622,11 @@
         id: "b_ferris_wheel",
         order: 7,
         time: "[18:30–19:15] 停留 45M",
-        name: "MOSAIC 大觀覽車 (摩天輪璀璨夜景)",
+        name: "MOSAIC 大觀覽車 (摩天輪夜景)",
         jpName: "モザイク大観覧車",
         lat: 34.6782,
         lng: 135.1844,
-        desc: "搭乘 MOSAIC 摩天輪，在空中俯瞰 360 度神戶港璀璨夜景與港灣絢麗燈火，感受極致浪漫悠閒氣氛。",
+        desc: "搭乘 MOSAIC 摩天輪，在空中俯瞰 360 度神戶港璀璨夜景與港灣點燈，感受浪漫悠閒氛圍。",
         gmapQuery: "モザイク大観覧車",
         restaurants: null
       },
@@ -708,17 +634,17 @@
         id: "b_return",
         order: 8,
         time: "[20:45–21:00] 賦歸",
-        name: "賦歸：返回道頓堀 Elizabeth Garden",
-        jpName: "神戸三宮 ➔ Elizabeth Garden Shinsaibashi",
+        name: "賦歸：返回道頓堀飯店",
+        jpName: "Elizabeth Garden Shinsaibashi",
         lat: 34.6688,
         lng: 135.5085,
-        desc: "於神戶三宮搭乘 JR 神戶線（新快速）至大阪/梅田轉御堂筋線，或搭乘阪神難波線直達列車至大阪難波，步行回道頓堀飯店（車程約 40–50 分鐘）。",
+        desc: "於神戶三宮搭乘 JR 神戶線（新快速）或阪神直通列車回大阪難波，步行回道頓堀 Elizabeth Garden Shinsaibashi 旅館休息。",
         gmapQuery: "Elizabeth Garden Shinsaibashi",
         restaurants: null
       }
     ];
 
-    // 方案 A 對照保留資料庫
+    // 方案 A 景點資料庫
     const spotsPlanA = [
       {
         id: "a_hotel",
@@ -740,7 +666,7 @@
         jpName: "AQUARIUM×ART átoa",
         lat: 34.6832,
         lng: 135.1936,
-        desc: "藝術與水族融合的都市型水族館，欣賞球體水槽 AQUA TERRA 與幻境光雕。",
+        desc: "結合藝術與海洋生物的都市型水族館，欣賞球體水槽 AQUA TERRA 與幻境光雕。",
         gmapQuery: "AQUARIUM×ART atoa",
         restaurants: null
       },
@@ -752,7 +678,7 @@
         jpName: "KOBE STEAK 青斜塔 by 精肉店Nick",
         lat: 34.6937,
         lng: 135.1878,
-        desc: "精肉店 Nick 直營鐵板牛排，享受主廚現煎頂級神戶和牛排餐。",
+        desc: "由精肉店 Nick 直營的極品鐵板牛排，現煎頂級神戶牛排骨肉與和牛夏多布里昂。",
         gmapQuery: "KOBE STEAK 青斜塔 兵庫県神戸市中央区中山手通3-10-12",
         restaurants: null
       },
@@ -776,7 +702,7 @@
         jpName: "北野異人館街 (Kitano Ijinkan)",
         lat: 34.7011,
         lng: 135.1898,
-        desc: "風見雞之館、萌黃之館與百年洋房星巴克。",
+        desc: "走訪風見雞之館與萌黃之館，漫步洋館街道與洋房星巴克。",
         gmapQuery: "風見鶏の館",
         restaurants: null
       },
@@ -785,10 +711,10 @@
         order: 6,
         time: "16:46 - 17:40 (移動至晚餐)",
         name: "晚餐：3 大名店推薦自選",
-        jpName: "すするか、すすらんか。/ 京都勝牛 / 朱記重慶小麺",
+        jpName: "ディナー 3選",
         lat: 34.6732,
         lng: 135.5028,
-        desc: "回心齋橋吃炙燒起司麻婆麵，或於神戶三宮吃炸牛排、元町吃重慶小麵。",
+        desc: "回心齋橋吃炙燒起司麻婆麵（すするか、すすらんか。），或在神戶吃京都勝牛、朱記重慶小麵。",
         gmapQuery: "すするか、すすらんか。 心斎橋店",
         restaurants: null
       }
@@ -807,10 +733,12 @@
     };
 
     function initMap() {
+      // 避免手機端單指滑動地圖阻擋頁面滾動，開啟 dragging 但避免滾輪誤觸
       map = L.map('map', {
         center: [34.6890, 135.1880],
         zoom: 14,
         zoomControl: true,
+        scrollWheelZoom: false, // 避免電腦滾輪滾過地圖時卡住
         attributionControl: true
       });
 
@@ -824,7 +752,7 @@
 
       setTimeout(() => {
         map.invalidateSize();
-      }, 150);
+      }, 200);
 
       window.addEventListener('resize', () => {
         if (map) map.invalidateSize();
@@ -869,9 +797,6 @@
       currentPlan = plan;
       document.getElementById('tabA').classList.toggle('active', plan === 'A');
       document.getElementById('tabB').classList.toggle('active', plan === 'B');
-      document.getElementById('map-banner-text').textContent = plan === 'B' 
-        ? '📍 方案 B：山側洋館漫步至海港摩天輪夜景' 
-        : '📍 方案 A：水族館 átoa 與精緻名店巡禮';
       renderApp();
     }
 
@@ -879,9 +804,9 @@
       return L.divIcon({
         className: 'custom-leaflet-icon',
         html: `<div class="custom-map-pin ${isBranch ? 'branch-pin' : ''}" id="map-pin-${order}">${order}</div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-        popupAnchor: [0, -16]
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+        popupAnchor: [0, -15]
       });
     }
 
@@ -957,7 +882,7 @@
           <div class="card-desc">${spot.desc}</div>
           ${restaurantHtml}
           <div class="card-actions">
-            <button class="btn-fly" onclick="focusSpot('${spot.id}', event)">🎯 定位景點</button>
+            <button class="btn-fly" onclick="focusSpot('${spot.id}', event)">🎯 定位地圖</button>
             <a class="btn-gnav" href="${gmapUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
               📍 Google 導航
             </a>
@@ -979,7 +904,7 @@
         map.fitBounds([
           [34.6750, 135.1800],
           [34.7030, 135.1970]
-        ], { padding: [40, 40] });
+        ], { padding: [25, 25] });
       }
 
       window.focusSpot = function(spotId, evt) {
@@ -992,17 +917,15 @@
         const activeCard = document.getElementById(`card-${spotId}`);
         if (activeCard) {
           activeCard.classList.add('active-spot');
-          activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
-        map.flyTo([targetSpot.lat, targetSpot.lng], 16, {
-          duration: 0.85,
-          easeLinearity: 0.25
+        map.flyTo([targetSpot.lat, targetSpot.lng], 15, {
+          duration: 0.8
         });
 
         setTimeout(() => {
           targetMarker.openPopup();
-        }, 850);
+        }, 750);
       };
     }
 
