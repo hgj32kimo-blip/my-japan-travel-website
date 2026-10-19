@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>神戶一日遊互動導覽地圖 | KOBE 1-DAY TRAVEL GUIDE</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <!-- Google Fonts: Noto Serif TC, Noto Sans TC, Cinzel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-cream: #faf7f2;
+      --card-bg: #ffffff;
+      --navy: #1b2a47;
+      --navy-light: #2c416a;
+      --kobe-red: #c94a29;
+      --kobe-red-hover: #a8381c;
+      --gold: #b38a49;
+      --text-main: #2b2b2b;
+      --text-muted: #696056;
+      --border: #e8e1d5;
+      --border-dark: #d5cbbf;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Noto Sans TC', sans-serif;
+      background-color: var(--bg-cream);
+      color: var(--text-main);
+    }
+
+    #app-container {
+      display: flex;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    #sidebar {
+      width: 480px;
+      height: 100%;
+      background: var(--card-bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 4px 0 24px rgba(27, 42, 71, 0.08);
+      z-index: 1000;
+      flex-shrink: 0;
+    }
+
+    .header-box {
+      padding: 22px 24px 18px;
+      background: var(--navy);
+      color: #ffffff;
+      border-bottom: 3px solid var(--gold);
+    }
+
+    .header-sub-tag {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .vol-badge {
+      font-family: 'Cinzel', serif;
+      font-size: 11px;
+      letter-spacing: 2px;
+      font-weight: 700;
+      color: #e5cb9b;
+    }
+
+    .time-badge {
+      font-size: 11px;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 3px 10px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    .header-title {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.55rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+      line-height: 1.25;
+    }
+
+    .header-summary {
+      font-size: 0.83rem;
+      color: #c9d5e8;
+      line-height: 1.45;
+    }
+
+    .transit-accordion {
+      background: #f4eee3;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .transit-trigger {
+      width: 100%;
+      padding: 11px 20px;
+      border: none;
+      background: transparent;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      font-family: 'Noto Sans TC', sans-serif;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--navy);
+      transition: background 0.2s;
+    }
+
+    .transit-trigger:hover {
+      background: #eee6d8;
+    }
+
+    .transit-details {
+      display: none;
+      padding: 12px 20px 16px;
+      background: #fbf9f4;
+      border-top: 1px dashed var(--border-dark);
+      font-size: 0.81rem;
+      color: #4f473e;
+      line-height: 1.55;
+    }
+
+    .transit-details.open {
+      display: block;
+    }
+
+    .transit-route-box {
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      background: #ffffff;
+      border-radius: 6px;
+      border-left: 3px solid var(--kobe-red);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    }
+
+    .transit-route-box:last-child {
+      margin-bottom: 0;
+    }
+
+    .transit-title {
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 3px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .route-tabs {
+      display: flex;
+      padding: 10px 18px;
+      background: #eee8de;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border-radius: 6px;
+      border: 1px solid var(--border-dark);
+      background: #ffffff;
+      color: var(--text-main);
+      font-size: 0.83rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: center;
+    }
+
+    .tab-btn.active {
+      background: var(--kobe-red);
+      color: #ffffff;
+      border-color: var(--kobe-red);
+      box-shadow: 0 2px 8px rgba(201, 74, 41, 0.28);
+    }
+
+    .timeline-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 18px 24px;
+      scroll-behavior: smooth;
+    }
+
+    .timeline-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    .timeline-container::-webkit-scrollbar-thumb {
+      background: #dcd4c7;
+      border-radius: 4px;
+    }
+
+    .trip-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .trip-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(27, 42, 71, 0.08);
+      border-color: var(--kobe-red);
+    }
+
+    .trip-card.active-spot {
+      border-color: var(--kobe-red);
+      border-left: 5px solid var(--kobe-red);
+      background: #fffcf9;
+      box-shadow: 0 4px 14px rgba(201, 74, 41, 0.12);
+    }
+
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      margin-right: 6px;
+    }
+
+    .step-time {
+      font-size: 0.77rem;
+      font-weight: 700;
+      color: var(--kobe-red);
+      letter-spacing: 0.5px;
+    }
+
+    .plan-tag {
+      font-size: 10px;
+      background: #f2ebe1;
+      color: #6d5b4a;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .card-title {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 2px;
+      line-height: 1.35;
+    }
+
+    .card-jp {
+      font-size: 0.81rem;
+      color: var(--gold);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .card-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+
+    .restaurant-drawer {
+      margin-top: 10px;
+      padding: 9px 12px;
+      background: #fbf9f5;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.79rem;
+    }
+
+    .rest-heading {
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .rest-item {
+      margin-top: 5px;
+      padding-left: 12px;
+      position: relative;
+      color: #403831;
+      line-height: 1.4;
+    }
+
+    .rest-item::before {
+      content: "◆";
+      position: absolute;
+      left: 0;
+      font-size: 8px;
+      color: var(--kobe-red);
+      top: 1px;
+    }
+
+    .rest-jp-name {
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .btn-fly {
+      flex: 1;
+      padding: 6px 10px;
+      background: #f4eee5;
+      border: 1px solid var(--border-dark);
+      border-radius: 4px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--navy);
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .btn-fly:hover {
+      background: #eae2d5;
+    }
+
+    .btn-gnav {
+      flex: 1.2;
+      padding: 6px 10px;
+      background: #2563eb;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-align: center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background 0.2s;
+    }
+
+    .btn-gnav:hover {
+      background: #1d4ed8;
+    }
+
+    #map-wrapper {
+      flex: 1;
+      height: 100%;
+      position: relative;
+      background: #f0ece3;
+    }
+
+    #map {
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .layer-selector {
+      position: absolute;
+      top: 18px;
+      right: 20px;
+      z-index: 1001;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(8px);
+      padding: 4px 6px;
+      border-radius: 20px;
+      border: 1px solid var(--border-dark);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+      display: flex;
+      gap: 4px;
+    }
+
+    .layer-btn {
+      border: none;
+      background: transparent;
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--navy);
+      border-radius: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .layer-btn.active {
+      background: var(--navy);
+      color: #ffffff;
+    }
+
+    .map-banner {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      z-index: 1001;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(8px);
+      padding: 7px 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border-dark);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--navy);
+      pointer-events: none;
+    }
+
+    .custom-map-pin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--navy);
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 13px;
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.35);
+      transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .custom-map-pin.branch-pin {
+      background: var(--kobe-red);
+    }
+
+    .custom-popup-box h3 {
+      font-family: 'Noto Serif TC', serif;
+      font-size: 1.05rem;
+      color: var(--navy);
+      margin-bottom: 2px;
+    }
+
+    .custom-popup-box .popup-jp {
+      font-size: 0.78rem;
+      color: var(--gold);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .custom-popup-box p {
+      font-size: 0.82rem;
+      color: #4a4a4a;
+      line-height: 1.45;
+      margin-bottom: 10px;
+    }
+
+    .popup-gnav-btn {
+      display: block;
+      background: #2563eb;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 7px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    @media (max-width: 880px) {
+      #app-container {
+        flex-direction: column-reverse;
+      }
+      #sidebar {
+        width: 100%;
+        height: 52%;
+        border-right: none;
+        border-top: 2px solid var(--border);
+      }
+      #map-wrapper {
+        width: 100%;
+        height: 48%;
+      }
+      .map-banner {
+        top: 10px;
+        left: 10px;
+        font-size: 0.74rem;
+        padding: 5px 10px;
+      }
+      .layer-selector {
+        top: 10px;
+        right: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <!-- 左側行程控制與資訊抽屜 -->
+    <aside id="sidebar">
+      
+      <!-- 刊頭 Header -->
+      <div class="header-box">
+        <div class="header-sub-tag">
+          <span class="vol-badge">KANSAI MOOK // KOBE TRIP</span>
+          <span class="time-badge">11:00 心齋橋出發</span>
+        </div>
+        <h1 class="header-title">神戶一日質感散策導覽</h1>
+        <p class="header-summary">方案 B：悠閒海港漫步與夜景（三宮牛排 ➔ 生田神社 ➔ 北野異人館 ➔ 南京町 ➔ MOSAIC 摩天輪夜景）。</p>
+      </div>
+
+      <!-- 交通指南折疊面板 -->
+      <div class="transit-accordion">
+        <button class="transit-trigger" onclick="toggleTransit()">
+          <span>🚆 通車路線與市內交通指南</span>
+          <span id="transit-indicator">▼ 點擊展開</span>
+        </button>
+        <div class="transit-details" id="transit-drawer">
+          <div class="transit-route-box">
+            <div class="transit-title">⚡ 去程：11:00 心齋橋 ➔ 神戶三宮（最速 JR 新快速）</div>
+            <div>於心齋橋搭乘地下鐵御堂筋線至<strong>「梅田駅」</strong>（約 6 分），於大阪站轉乘 <strong>JR 神戶線新快速</strong> 直達<strong>「JR 三ノ宮駅」</strong>（最速 21 分）。全程約 45–50 分鐘。</div>
+          </div>
+          <div class="transit-route-box">
+            <div class="transit-title">🚇 去程備選：大阪難波直通車（阪神電鐵）</div>
+            <div>自旅館步行至<strong>「大阪難波駅」</strong>搭乘 <strong>阪神難波線（快速急行）</strong> 直達<strong>「神戶三宮駅」</strong>，免於梅田換車轉乘。</div>
+          </div>
+          <div class="transit-route-box">
+            <div class="transit-title">🚌 神戶市內接駁密技</div>
+            <div>
+              • <strong>生田神社 ➔ 北野異人館</strong>：沿北野坂緩坡向上漫步約 15 分鐘，沿途有特色洋菓子與雜貨店。<br>
+              • <strong>北野異人館 ➔ 南京町</strong>：下山可順坡散步約 15 分鐘，亦可於坡頂搭乘綠色 <strong>City Loop 觀光巴士</strong> 直達中華街（南京町）。<br>
+              • <strong>南京町 ➔ Harborland umie / MOSAIC</strong>：往海邊方向輕鬆徒步約 10 分鐘即可抵達濱海木棧長廊。
+            </div>
+          </div>
+          <div class="transit-route-box">
+            <div class="transit-title">🌙 賦歸路線：20:45–21:00 神戶三宮 ➔ 回旅館</div>
+            <div>
+              於神戶三宮搭乘 <strong>JR 神戶線（新快速）</strong> 至大阪/梅田轉御堂筋線，或搭乘 <strong>阪神難波線直通列車</strong> 直達大阪難波後，步行回道頓堀 <strong>Elizabeth Garden Shinsaibashi</strong> 旅館（車程約 40–50 分鐘）。
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 行程方案切換列 -->
+      <div class="route-tabs">
+        <button class="tab-btn active" id="tabB" onclick="switchPlan('B')">
+          方案 B：悠閒海港漫步與夜景
+        </button>
+        <button class="tab-btn" id="tabA" onclick="switchPlan('A')">
+          方案 A：水族館 átoa 與名店巡禮
+        </button>
+      </div>
+
+      <!-- 景點時間軸滾動列表 -->
+      <div class="timeline-container" id="timelineList"></div>
+
+    </aside>
+
+    <!-- 右側地圖視窗容器 -->
+    <main id="map-wrapper">
+      
+      <!-- 圖資切換選單 -->
+      <div class="layer-selector">
+        <button class="layer-btn active" id="btnLayerStd" onclick="setGsiLayer('std')">標準圖</button>
+        <button class="layer-btn" id="btnLayerPale" onclick="setGsiLayer('pale')">淡色圖</button>
+      </div>
+
+      <!-- 導航方位提示 -->
+      <div class="map-banner">
+        <span id="map-banner-text">📍 方案 B：山側洋館漫步至海港摩天輪夜景</span>
+      </div>
+
+      <!-- 地圖 DOM 容器 -->
+      <div id="map"></div>
+
+    </main>
+
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <script>
+    // 方案 B 完整行程資料庫
+    const spotsPlanB = [
+      {
+        id: "b_start",
+        order: 1,
+        time: "[11:00] 出發",
+        name: "心齋橋出發 ➔ 抵達神戶三宮",
+        jpName: "心斎橋駅 ➔ 三宮駅",
+        lat: 34.6946,
+        lng: 135.1953,
+        desc: "地下鐵御堂筋線至梅田轉乘 JR 新快速（最速 21 分）或難波搭乘阪神特急直達神戶三宮，車程約 45–50 分鐘。",
+        gmapQuery: "JR 三ノ宮駅",
+        restaurants: null
+      },
+      {
+        id: "b_lunch",
+        order: 2,
+        time: "[12:00–13:30] 午餐 1.5H",
+        name: "神戶三宮・神戶牛排午餐",
+        jpName: "神戸牛ステーキランチ (3 選 1)",
+        lat: 34.6934,
+        lng: 135.1925,
+        desc: "抵達三宮後立即享用極致和牛鐵板燒，師傅現煎粉嫩但馬牛與酥脆蒜片，入口即化。",
+        gmapQuery: "ステーキランド神戸館",
+        restaurants: {
+          title: "午餐神戶牛排 3 選推薦：",
+          items: [
+            { jp: "ステーキランド神戸館 (Steakland Kobe)", desc: "三宮站旁高 CP 值首選，午間神戶牛排套餐實惠飽足、蒜片香氣逼人。" },
+            { jp: "神戸牛ステーキレストラン モーリヤ 本店 (Mouriya Honten)", desc: "創立於 1885 年的百年名店，但馬牛油花細膩，佐赤穗海鹽絕品。" },
+            { jp: "あぶり肉工房 和黒 北野坂店 (Wakkoqu)", desc: "注重炭火溫控與精緻烤工，修煎酥脆牛油角，位於前往北野坂路線最順路。" }
+          ]
+        }
+      },
+      {
+        id: "b_ikuta",
+        order: 3,
+        time: "[13:45–14:30] 停留 45M",
+        name: "生田神社 (結緣參拜與流水占卜)",
+        jpName: "生田神社 (Ikuta Jinja)",
+        lat: 34.6948,
+        lng: 135.1906,
+        desc: "【步行約 5 分鐘抵達】擁有 1800 年悠久歷史的神戶起緣之地。穿過朱紅鳥居，於後殿「生田之森」體驗神奇流水水占卜。",
+        gmapQuery: "生田神社",
+        restaurants: null
+      },
+      {
+        id: "b_kitano",
+        order: 4,
+        time: "[14:45–16:15] 停留 1.5H",
+        name: "北野異人館街 (歐風洋館漫步)",
+        jpName: "北野異人館街 (Kitano Ijinkan)",
+        lat: 34.7011,
+        lng: 135.1898,
+        desc: "【沿北野坂緩坡向上步行約 15 分鐘】參觀紅磚風向雞屋頂的「風見鶏の館」、薄荷綠洋房「萌黄の館」，並漫步洋房星巴克。",
+        gmapQuery: "風見鶏の館",
+        restaurants: null
+      },
+      {
+        id: "b_nankin",
+        order: 5,
+        time: "[16:30–17:15] 停留 45M",
+        name: "南京町 (中華街散步與街頭熱食)",
+        jpName: "南京町 (Nankinmachi)",
+        lat: 34.6883,
+        lng: 135.1882,
+        desc: "【徒步或搭乘 City Loop 觀光巴士約 15 分鐘】漫步日本三大中華街，品嚐排隊名店老祥記熱呼呼豚肉小籠包與各式街頭點心。",
+        gmapQuery: "南京町 老祥記",
+        restaurants: null
+      },
+      {
+        id: "b_mosaic_walk",
+        order: 6,
+        time: "[17:30–18:30] 漫步 1H",
+        name: "神戶 Harborland umie 與 MOSAIC 長廊",
+        jpName: "神戸ハーバーランド umie & MOSAIC",
+        lat: 34.6789,
+        lng: 135.1848,
+        desc: "【往港灣方向步行約 10 分鐘】岸邊第一排正對紅色的神戶港塔（神戸ポートタワー）與海洋博物館，捕捉經典明信片夜景視角；逛逛特色雜貨與洋菓子甜點店。",
+        gmapQuery: "神戸ハーバーランド MOSAIC",
+        restaurants: null
+      },
+      {
+        id: "b_ferris_wheel",
+        order: 7,
+        time: "[18:30–19:15] 停留 45M",
+        name: "MOSAIC 大觀覽車 (摩天輪璀璨夜景)",
+        jpName: "モザイク大観覧車",
+        lat: 34.6782,
+        lng: 135.1844,
+        desc: "搭乘 MOSAIC 摩天輪，在空中俯瞰 360 度神戶港璀璨夜景與港灣絢麗燈火，感受極致浪漫悠閒氣氛。",
+        gmapQuery: "モザイク大観覧車",
+        restaurants: null
+      },
+      {
+        id: "b_return",
+        order: 8,
+        time: "[20:45–21:00] 賦歸",
+        name: "賦歸：返回道頓堀 Elizabeth Garden",
+        jpName: "神戸三宮 ➔ Elizabeth Garden Shinsaibashi",
+        lat: 34.6688,
+        lng: 135.5085,
+        desc: "於神戶三宮搭乘 JR 神戶線（新快速）至大阪/梅田轉御堂筋線，或搭乘阪神難波線直達列車至大阪難波，步行回道頓堀飯店（車程約 40–50 分鐘）。",
+        gmapQuery: "Elizabeth Garden Shinsaibashi",
+        restaurants: null
+      }
+    ];
+
+    // 方案 A 對照保留資料庫
+    const spotsPlanA = [
+      {
+        id: "a_hotel",
+        order: 1,
+        time: "09:00 - 10:20 (移動)",
+        name: "出發：道頓堀 Elizabeth Garden",
+        jpName: "Elizabeth Garden Shinsaibashi",
+        lat: 34.6688,
+        lng: 135.5085,
+        desc: "自飯店出發搭乘阪神難波線至神戶三宮，轉乘 Port Loop 或計程車直達水族館。",
+        gmapQuery: "Elizabeth Garden Shinsaibashi",
+        restaurants: null
+      },
+      {
+        id: "a_atoa",
+        order: 2,
+        time: "10:20 - 12:20 (停留 2H)",
+        name: "神戶 átoa 水族館",
+        jpName: "AQUARIUM×ART átoa",
+        lat: 34.6832,
+        lng: 135.1936,
+        desc: "藝術與水族融合的都市型水族館，欣賞球體水槽 AQUA TERRA 與幻境光雕。",
+        gmapQuery: "AQUARIUM×ART atoa",
+        restaurants: null
+      },
+      {
+        id: "a_nick",
+        order: 3,
+        time: "12:20 - 14:29 (午餐 2H)",
+        name: "午餐：KOBE STEAK 青斜塔",
+        jpName: "KOBE STEAK 青斜塔 by 精肉店Nick",
+        lat: 34.6937,
+        lng: 135.1878,
+        desc: "精肉店 Nick 直營鐵板牛排，享受主廚現煎頂級神戶和牛排餐。",
+        gmapQuery: "KOBE STEAK 青斜塔 兵庫県神戸市中央区中山手通3-10-12",
+        restaurants: null
+      },
+      {
+        id: "a_ikuta",
+        order: 4,
+        time: "14:29 - 15:35 (停留 1H)",
+        name: "生田神社 (結緣與流水占卜)",
+        jpName: "生田神社 (Ikuta Jinja)",
+        lat: 34.6948,
+        lng: 135.1906,
+        desc: "漫步生田之森體驗流水水占卜。",
+        gmapQuery: "生田神社",
+        restaurants: null
+      },
+      {
+        id: "a_kitano",
+        order: 5,
+        time: "15:35 - 16:46 (停留 1H)",
+        name: "北野異人館街",
+        jpName: "北野異人館街 (Kitano Ijinkan)",
+        lat: 34.7011,
+        lng: 135.1898,
+        desc: "風見雞之館、萌黃之館與百年洋房星巴克。",
+        gmapQuery: "風見鶏の館",
+        restaurants: null
+      },
+      {
+        id: "a_dinner",
+        order: 6,
+        time: "16:46 - 17:40 (移動至晚餐)",
+        name: "晚餐：3 大名店推薦自選",
+        jpName: "すするか、すすらんか。/ 京都勝牛 / 朱記重慶小麺",
+        lat: 34.6732,
+        lng: 135.5028,
+        desc: "回心齋橋吃炙燒起司麻婆麵，或於神戶三宮吃炸牛排、元町吃重慶小麵。",
+        gmapQuery: "すするか、すすらんか。 心斎橋店",
+        restaurants: null
+      }
+    ];
+
+    let currentPlan = 'B';
+    let map = null;
+    let markersLayer = null;
+    let routePolyline = null;
+    let currentGsiTileLayer = null;
+    let currentTileType = 'std';
+
+    const GSI_TILES = {
+      std: "https://cyberjapandata.gsi.go.jp/xyz/std/{z}/{x}/{y}.png",
+      pale: "https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png"
+    };
+
+    function initMap() {
+      map = L.map('map', {
+        center: [34.6890, 135.1880],
+        zoom: 14,
+        zoomControl: true,
+        attributionControl: true
+      });
+
+      currentGsiTileLayer = L.tileLayer(GSI_TILES.std, {
+        maxZoom: 18,
+        minZoom: 10,
+        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">日本國土地理院 (GSI)</a>'
+      }).addTo(map);
+
+      markersLayer = L.layerGroup().addTo(map);
+
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 150);
+
+      window.addEventListener('resize', () => {
+        if (map) map.invalidateSize();
+      });
+
+      renderApp();
+    }
+
+    function setGsiLayer(type) {
+      if (currentTileType === type) return;
+      currentTileType = type;
+
+      document.getElementById('btnLayerStd').classList.toggle('active', type === 'std');
+      document.getElementById('btnLayerPale').classList.toggle('active', type === 'pale');
+
+      if (currentGsiTileLayer) {
+        map.removeLayer(currentGsiTileLayer);
+      }
+
+      currentGsiTileLayer = L.tileLayer(GSI_TILES[type], {
+        maxZoom: 18,
+        minZoom: 10,
+        attribution: '<a href="https://maps.gsi.go.jp/development/ichiran.html" target="_blank" rel="noopener">日本國土地理院 (GSI)</a>'
+      }).addTo(map);
+    }
+
+    function toggleTransit() {
+      const drawer = document.getElementById('transit-drawer');
+      const indicator = document.getElementById('transit-indicator');
+      const isOpen = drawer.classList.contains('open');
+      
+      if (isOpen) {
+        drawer.classList.remove('open');
+        indicator.textContent = '▼ 點擊展開';
+      } else {
+        drawer.classList.add('open');
+        indicator.textContent = '▲ 收合內容';
+      }
+    }
+
+    function switchPlan(plan) {
+      currentPlan = plan;
+      document.getElementById('tabA').classList.toggle('active', plan === 'A');
+      document.getElementById('tabB').classList.toggle('active', plan === 'B');
+      document.getElementById('map-banner-text').textContent = plan === 'B' 
+        ? '📍 方案 B：山側洋館漫步至海港摩天輪夜景' 
+        : '📍 方案 A：水族館 átoa 與精緻名店巡禮';
+      renderApp();
+    }
+
+    function createCustomPin(order, isBranch) {
+      return L.divIcon({
+        className: 'custom-leaflet-icon',
+        html: `<div class="custom-map-pin ${isBranch ? 'branch-pin' : ''}" id="map-pin-${order}">${order}</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+        popupAnchor: [0, -16]
+      });
+    }
+
+    function renderApp() {
+      if (!map) return;
+
+      markersLayer.clearLayers();
+      if (routePolyline) {
+        map.removeLayer(routePolyline);
+      }
+
+      const timelineEl = document.getElementById('timelineList');
+      timelineEl.innerHTML = '';
+
+      const activeSpots = currentPlan === 'B' ? spotsPlanB : spotsPlanA;
+      const latlngs = [];
+      const spotMarkers = {};
+
+      activeSpots.forEach((spot, index) => {
+        const orderNum = index + 1;
+        const latlng = [spot.lat, spot.lng];
+        latlngs.push(latlng);
+
+        const gmapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(spot.gmapQuery)}`;
+
+        const marker = L.marker(latlng, {
+          icon: createCustomPin(orderNum, currentPlan === 'B')
+        });
+
+        const popupHtml = `
+          <div class="custom-popup-box">
+            <h3>STEP ${orderNum}. ${spot.name}</h3>
+            <div class="popup-jp">${spot.jpName}</div>
+            <p>${spot.desc}</p>
+            <a href="${gmapUrl}" target="_blank" rel="noopener" class="popup-gnav-btn">
+              🗺️ 開啟 Google 地圖導航
+            </a>
+          </div>
+        `;
+        marker.bindPopup(popupHtml);
+        markersLayer.addLayer(marker);
+        spotMarkers[spot.id] = marker;
+
+        const card = document.createElement('div');
+        card.className = 'trip-card';
+        card.id = `card-${spot.id}`;
+
+        let restaurantHtml = '';
+        if (spot.restaurants) {
+          restaurantHtml = `
+            <div class="restaurant-drawer">
+              <div class="rest-heading">🍴 ${spot.restaurants.title}</div>
+              ${spot.restaurants.items.map(r => `
+                <div class="rest-item">
+                  <div class="rest-jp-name">${r.jp}</div>
+                  <div>${r.desc}</div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+        }
+
+        card.innerHTML = `
+          <div class="card-meta">
+            <div>
+              <span class="step-badge">${orderNum}</span>
+              <span class="step-time">${spot.time}</span>
+            </div>
+            <span class="plan-tag">${currentPlan === 'B' ? '方案 B' : '方案 A'}</span>
+          </div>
+          <div class="card-title">${spot.name}</div>
+          <div class="card-jp">${spot.jpName}</div>
+          <div class="card-desc">${spot.desc}</div>
+          ${restaurantHtml}
+          <div class="card-actions">
+            <button class="btn-fly" onclick="focusSpot('${spot.id}', event)">🎯 定位景點</button>
+            <a class="btn-gnav" href="${gmapUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+              📍 Google 導航
+            </a>
+          </div>
+        `;
+
+        card.onclick = () => focusSpot(spot.id);
+        timelineEl.appendChild(card);
+      });
+
+      if (latlngs.length > 1) {
+        routePolyline = L.polyline(latlngs, {
+          color: '#c94a29',
+          weight: 3.5,
+          opacity: 0.85,
+          dashArray: '7, 8'
+        }).addTo(map);
+
+        map.fitBounds([
+          [34.6750, 135.1800],
+          [34.7030, 135.1970]
+        ], { padding: [40, 40] });
+      }
+
+      window.focusSpot = function(spotId, evt) {
+        if (evt) evt.stopPropagation();
+        const targetSpot = activeSpots.find(s => s.id === spotId);
+        const targetMarker = spotMarkers[spotId];
+        if (!targetSpot || !targetMarker) return;
+
+        document.querySelectorAll('.trip-card').forEach(c => c.classList.remove('active-spot'));
+        const activeCard = document.getElementById(`card-${spotId}`);
+        if (activeCard) {
+          activeCard.classList.add('active-spot');
+          activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        map.flyTo([targetSpot.lat, targetSpot.lng], 16, {
+          duration: 0.85,
+          easeLinearity: 0.25
+        });
+
+        setTimeout(() => {
+          targetMarker.openPopup();
+        }, 850);
+      };
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+    });
+  </script>
+</body>
+</html>
